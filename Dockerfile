@@ -1,12 +1,12 @@
-FROM runpod/base:0.6.2-cuda12.2.0
+FROM pytorch/pytorch:2.4.1-cuda12.4-cudnn9-runtime
 
 WORKDIR /app
 
-# Install Python dependencies
+# Install dependencies (torch already in base image)
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Pre-download model weights so cold starts only pay network cost once
+# Pre-download model weights so cold starts are fast
 RUN python -c "\
 from transformers import AutoModelForImageSegmentation; \
 AutoModelForImageSegmentation.from_pretrained('briaai/RMBG-2.0', trust_remote_code=True); \

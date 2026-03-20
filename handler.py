@@ -27,6 +27,8 @@ def load_model():
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model.to(device)
     model.eval()
+    # Ensure float32 to avoid mixed-precision errors
+    model.float()
     print(f"[bg-removal] Model loaded on {device}")
 
 

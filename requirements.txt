@@ -2,3 +2,6 @@ transformers>=4.39.0
 Pillow>=10.0.0
 numpy>=1.24.0
 runpod>=1.6.0
+einops
+kornia
+timm

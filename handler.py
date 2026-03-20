@@ -1,5 +1,7 @@
 """
-RunPod Serverless Handler — RMBG-2.0 Background Removal
+RunPod Serverless Handler — BiRefNet Background Removal
+
+Uses ZhengPeng7/BiRefNet (open, no gating) for high-quality segmentation.
 
 Accepts a base64-encoded image, returns:
   - alpha_mask: base64 PNG (grayscale mask)
@@ -20,13 +22,13 @@ from torchvision.transforms.functional import normalize
 # ---------------------------------------------------------------------------
 # Model loading (runs once at worker startup, outside the handler)
 # ---------------------------------------------------------------------------
-print("[bg-removal] Loading RMBG-2.0 model…")
+print("[bg-removal] Loading BiRefNet model…")
 from transformers import AutoModelForImageSegmentation  # noqa: E402
 
 MODEL_INPUT_SIZE = (1024, 1024)
 
 model = AutoModelForImageSegmentation.from_pretrained(
-    "briaai/RMBG-2.0", trust_remote_code=True
+    "ZhengPeng7/BiRefNet", trust_remote_code=True
 )
 device = "cuda" if torch.cuda.is_available() else "cpu"
 model.to(device)

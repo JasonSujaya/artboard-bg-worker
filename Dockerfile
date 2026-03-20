@@ -1,5 +1,8 @@
 FROM pytorch/pytorch:2.4.1-cuda12.4-cudnn9-runtime
 
+# Link to public repo so GHCR inherits public visibility
+LABEL org.opencontainers.image.source=https://github.com/JasonSujaya/artboard-bg-worker
+
 WORKDIR /app
 
 # Install dependencies (torch already in base image)

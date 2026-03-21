@@ -91,16 +91,54 @@ def load_upscaler(model_name: str = "RealESRGAN_x4plus_anime_6B", scale: int = 4
     }
 
     cfg = configs.get(model_name, configs["RealESRGAN_x4plus_anime_6B"])
-    upsampler = RealESRGANer(
+
+    # For community models (Remacri, UltraSharp), we need to manually load
+    # the state dict since they use a flat format without 'params' wrapper
+    import torch
+    from realesrgan.utils import RealESRGANer as _RealESRGANer
+    from basicsr.utils.download_util import load_file_from_url
+
+    model_url = cfg["url"]
+    model_arch = cfg["arch"]()
+
+    # Download model weights
+    model_path = load_file_from_url(
+        url=model_url,
+        model_dir="/app/weights",
+        progress=True,
+        file_name=None,
+    )
+
+    # Load and fix state dict format for community models
+    loadnet = torch.load(model_path, map_location=torch.device("cpu"), weights_only=False)
+    if "params_ema" in loadnet:
+        keyname = "params_ema"
+    elif "params" in loadnet:
+        keyname = "params"
+    else:
+        keyname = None
+
+    if keyname:
+        model_arch.load_state_dict(loadnet[keyname], strict=True)
+    else:
+        model_arch.load_state_dict(loadnet, strict=True)
+
+    model_arch.eval()
+    model_arch.to(get_device())
+
+    upsampler = _RealESRGANer(
         scale=cfg["scale"],
-        model_path=cfg["url"],
-        model=cfg["arch"](),
+        model_path=model_path,
+        model=model_arch,
         tile=0,
         tile_pad=10,
         pre_pad=0,
         half=True,
         gpu_id=0 if get_device() == "cuda" else None,
     )
+    # Skip the internal loadnet since we already loaded
+    upsampler.model = model_arch
+
     upscaler_models[key] = upsampler
     print(f"[tools] {model_name} loaded")
     return upsampler

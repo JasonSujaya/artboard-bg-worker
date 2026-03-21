@@ -100,30 +100,32 @@ def load_upscaler(model_name: str = "RealESRGAN_x4plus_anime_6B", scale: int = 4
         url=model_url, model_dir="/app/weights", progress=True, file_name=None,
     )
 
-    # Load checkpoint and detect format
+    # Load checkpoint and normalize to {'params': state_dict} format
+    # RealESRGANer expects this internally
     loadnet = torch.load(model_path, map_location=torch.device("cpu"), weights_only=False)
     if "params_ema" in loadnet:
         state_dict = loadnet["params_ema"]
     elif "params" in loadnet:
         state_dict = loadnet["params"]
     else:
-        # Community models (Remacri, UltraSharp) — raw state dict, possibly old ESRGAN format
         state_dict = loadnet
 
-    # Convert old ESRGAN key format to RRDBNet format if needed
+    # Convert old ESRGAN key format if needed
     first_key = next(iter(state_dict))
     if first_key.startswith("model."):
         state_dict = _convert_old_esrgan_keys(state_dict)
 
-    model_arch = cfg["arch"]()
-    model_arch.load_state_dict(state_dict, strict=True)
-    model_arch.eval()
+    # Save normalized checkpoint so RealESRGANer can load it without errors
+    normalized_path = model_path + ".normalized.pth"
+    import os
+    if not os.path.exists(normalized_path):
+        torch.save({"params": state_dict}, normalized_path)
 
     from realesrgan import RealESRGANer
     upsampler = RealESRGANer(
         scale=cfg["scale"],
-        model_path=model_path,
-        model=model_arch,
+        model_path=normalized_path,
+        model=cfg["arch"](),
         tile=0,
         tile_pad=10,
         pre_pad=0,

@@ -92,41 +92,35 @@ def load_upscaler(model_name: str = "RealESRGAN_x4plus_anime_6B", scale: int = 4
 
     cfg = configs.get(model_name, configs["RealESRGAN_x4plus_anime_6B"])
 
-    # For community models (Remacri, UltraSharp), we need to manually load
-    # the state dict since they use a flat format without 'params' wrapper
     import torch
-    from realesrgan.utils import RealESRGANer as _RealESRGANer
     from basicsr.utils.download_util import load_file_from_url
 
     model_url = cfg["url"]
-    model_arch = cfg["arch"]()
-
-    # Download model weights
     model_path = load_file_from_url(
-        url=model_url,
-        model_dir="/app/weights",
-        progress=True,
-        file_name=None,
+        url=model_url, model_dir="/app/weights", progress=True, file_name=None,
     )
 
-    # Load and fix state dict format for community models
+    # Load checkpoint and detect format
     loadnet = torch.load(model_path, map_location=torch.device("cpu"), weights_only=False)
     if "params_ema" in loadnet:
-        keyname = "params_ema"
+        state_dict = loadnet["params_ema"]
     elif "params" in loadnet:
-        keyname = "params"
+        state_dict = loadnet["params"]
     else:
-        keyname = None
+        # Community models (Remacri, UltraSharp) — raw state dict, possibly old ESRGAN format
+        state_dict = loadnet
 
-    if keyname:
-        model_arch.load_state_dict(loadnet[keyname], strict=True)
-    else:
-        model_arch.load_state_dict(loadnet, strict=True)
+    # Convert old ESRGAN key format to RRDBNet format if needed
+    first_key = next(iter(state_dict))
+    if first_key.startswith("model."):
+        state_dict = _convert_old_esrgan_keys(state_dict)
 
+    model_arch = cfg["arch"]()
+    model_arch.load_state_dict(state_dict, strict=True)
     model_arch.eval()
-    model_arch.to(get_device())
 
-    upsampler = _RealESRGANer(
+    from realesrgan import RealESRGANer
+    upsampler = RealESRGANer(
         scale=cfg["scale"],
         model_path=model_path,
         model=model_arch,
@@ -136,12 +130,37 @@ def load_upscaler(model_name: str = "RealESRGAN_x4plus_anime_6B", scale: int = 4
         half=True,
         gpu_id=0 if get_device() == "cuda" else None,
     )
-    # Skip the internal loadnet since we already loaded
-    upsampler.model = model_arch
 
     upscaler_models[key] = upsampler
     print(f"[tools] {model_name} loaded")
     return upsampler
+
+
+def _convert_old_esrgan_keys(state_dict: dict) -> dict:
+    """Convert old ESRGAN state_dict keys to RRDBNet format."""
+    import re
+    new_dict = {}
+    for old_key, value in state_dict.items():
+        new_key = old_key
+        # model.0 → conv_first
+        new_key = re.sub(r"^model\.0\.", "conv_first.", new_key)
+        # model.1.sub.N.RDB{M}.conv{K}.0 → body.N.rdb{M}.conv{K}
+        new_key = re.sub(
+            r"^model\.1\.sub\.(\d+)\.RDB(\d+)\.conv(\d+)\.0\.",
+            r"body.\1.rdb\2.conv\3.", new_key
+        )
+        # model.1.sub.23 → body.23 (the final conv in trunk)
+        new_key = re.sub(r"^model\.1\.sub\.23\.", "conv_body.", new_key)
+        # model.3 → conv_up1
+        new_key = re.sub(r"^model\.3\.", "conv_up1.", new_key)
+        # model.6 → conv_up2
+        new_key = re.sub(r"^model\.6\.", "conv_up2.", new_key)
+        # model.8 → conv_hr
+        new_key = re.sub(r"^model\.8\.", "conv_hr.", new_key)
+        # model.10 → conv_last
+        new_key = re.sub(r"^model\.10\.", "conv_last.", new_key)
+        new_dict[new_key] = value
+    return new_dict
 
 
 # ---------------------------------------------------------------------------

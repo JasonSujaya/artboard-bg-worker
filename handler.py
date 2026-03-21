@@ -13,9 +13,9 @@ import traceback
 import runpod
 
 # Patch: basicsr imports removed torchvision.transforms.functional_tensor
+import sys
 import torchvision.transforms.functional as _F
-import torchvision.transforms
-torchvision.transforms.functional_tensor = _F
+sys.modules["torchvision.transforms.functional_tensor"] = _F
 
 # ---------------------------------------------------------------------------
 # Lazy model caches

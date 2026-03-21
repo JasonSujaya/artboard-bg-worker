@@ -5,6 +5,11 @@ LABEL org.opencontainers.image.source=https://github.com/JasonSujaya/artboard-bg
 
 WORKDIR /app
 
+# System deps for opencv
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgl1-mesa-glx libglib2.0-0 libxcb1 && \
+    rm -rf /var/lib/apt/lists/*
+
 # Install dependencies (torch already in base image)
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt

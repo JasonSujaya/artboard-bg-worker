@@ -126,7 +126,7 @@ def load_upscaler(model_name: str = "RealESRGAN_x4plus_anime_6B", scale: int = 4
         scale=cfg["scale"],
         model_path=normalized_path,
         model=cfg["arch"](),
-        tile=0,
+        tile=512,
         tile_pad=10,
         pre_pad=0,
         half=True,

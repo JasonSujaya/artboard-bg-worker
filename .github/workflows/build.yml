@@ -3,13 +3,13 @@ name: Build and Push Docker Image
 on:
   push:
     branches: [main]
+  schedule:
+    # Rebuild weekly to keep ttl.sh image alive
+    - cron: '0 0 * * 0'
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
 
     steps:
       - uses: actions/checkout@v4
@@ -22,10 +22,10 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build and push to ttl.sh
+      - name: Build and push
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
-          tags: ttl.sh/artboard-bg-worker:2h
+          tags: ttl.sh/artboard-bg-worker:7d
           platforms: linux/amd64

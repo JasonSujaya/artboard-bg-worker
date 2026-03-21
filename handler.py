@@ -73,6 +73,16 @@ def load_upscaler(model_name: str = "RealESRGAN_x4plus_anime_6B", scale: int = 4
             "url": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.1/RealESRGAN_x2plus.pth",
             "scale": 2,
         },
+        "4x_Remacri": {
+            "arch": lambda: RRDBNet(num_in_ch=3, num_out_ch=3, num_feat=64, num_block=23, num_grow_ch=32, scale=4),
+            "url": "https://huggingface.co/uwg/upscaler/resolve/main/ESRGAN/4x_foolhardy_Remacri.pth",
+            "scale": 4,
+        },
+        "4x_UltraSharp": {
+            "arch": lambda: RRDBNet(num_in_ch=3, num_out_ch=3, num_feat=64, num_block=23, num_grow_ch=32, scale=4),
+            "url": "https://huggingface.co/uwg/upscaler/resolve/main/ESRGAN/4x_UltraSharp.pth",
+            "scale": 4,
+        },
     }
 
     cfg = configs.get(model_name, configs["RealESRGAN_x4plus_anime_6B"])
